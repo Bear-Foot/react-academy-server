@@ -21,36 +21,44 @@ io.on('connection', socket => {
     filesUploading[id + uploadID] = {
       uploadID, progress: 0, status: 'ongoing', ownerID: id,
     }
+    console.log('receving', filesUploading[id + uploadID])
     updateFileStatus(id + uploadID)
-    console.log(filesUploading[id + uploadID])
   })
 });
 
 const filesUploading = {}
 
 const updateFileStatus = (fileID) => {
-  console.log(filesUploading);
-  console.log(fileID);
-  const newProgress = filesUploading[fileID].progress + Math.floor(Math.random() * 50)
-  const realProgress = newProgress >= 100 ? 100 : newProgress
-  const upload = filesUploading[fileID]
-  const conn = connections[upload.ownerID]
-  const error = Math.random() < 0.2
-
-  upload.progress = realProgress
-  if (error) {
-    upload.status = 'error'
-    conn.emit('error', { uploadID: upload.id })
-  }
-
-  if (realProgress === 100) {
-    upload.status = 'done'
-    conn.emit('end', { uploadID: upload.id })
-  }
-  if (upload.status === 'ongoing') {
-    const delay = Math.floor(Math.random() * 1000) + 500
-    conn.emit('progress', { uploadID: upload.id, progress: upload.progress })
-    setTimeout(() => updateFileStatus(fileID), delay)
+  try {
+    const newProgress = filesUploading[fileID].progress + Math.floor(Math.random() * 20)
+    const realProgress = newProgress >= 100 ? 100 : newProgress
+    const upload = filesUploading[fileID]
+    const conn = connections[upload.ownerID]
+    const error = Math.random() < 0.05
+  
+    upload.progress = realProgress
+    if (error) {
+      upload.status = 'error'
+      console.log('Emitting Error');
+      
+      conn.emit('errors', { uploadID: upload.uploadID })
+    }
+  
+    if (realProgress === 100) {
+      console.log('Emitting End');
+      
+      upload.status = 'done'
+      conn.emit('end', { uploadID: upload.uploadID })
+    }
+    if (upload.status === 'ongoing') {
+      const delay = Math.floor(Math.random() * 300) + 200
+      console.log('emitting progress')
+      
+      conn.emit('progress', { uploadID: upload.uploadID, progress: upload.progress })
+      setTimeout(() => updateFileStatus(fileID), delay)
+    }
+  } catch (e) {
+    console.log('error', e)
   }
 }
 
