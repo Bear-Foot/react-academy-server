@@ -24,6 +24,15 @@ io.on('connection', socket => {
     console.log('receving', filesUploading[id + uploadID])
     updateFileStatus(id + uploadID)
   })
+
+  socket.on('uploadStop', ({ id, uploadID }) => {
+    if (filesUploading[id + uploadID].status === 'ongoing') {
+      filesUploading[id + uploadID] = {
+        ...filesUploading[id + uploadID], status: 'canceled',
+      }
+      console.log('receving', filesUploading[id + uploadID])
+    }
+  })
 });
 
 const filesUploading = {}
@@ -37,23 +46,22 @@ const updateFileStatus = (fileID) => {
     const error = Math.random() < 0.05
   
     upload.progress = realProgress
-    if (error) {
-      upload.status = 'error'
-      console.log('Emitting Error');
-      
-      conn.emit('errors', { uploadID: upload.uploadID })
+    if (upload.status === 'canceled') {
+      console.log('Upload cancel by client');
     }
-  
-    if (realProgress === 100) {
+    else if (realProgress === 100) {
       console.log('Emitting End');
-      
       upload.status = 'done'
       conn.emit('end', { uploadID: upload.uploadID })
     }
-    if (upload.status === 'ongoing') {
+    else if (error) {
+      upload.status = 'error'
+      console.log('Emitting Error');
+      conn.emit('errors', { uploadID: upload.uploadID })
+    }
+    else if (upload.status === 'ongoing') {
       const delay = Math.floor(Math.random() * 300) + 200
       console.log('emitting progress')
-      
       conn.emit('progress', { uploadID: upload.uploadID, progress: upload.progress })
       setTimeout(() => updateFileStatus(fileID), delay)
     }
