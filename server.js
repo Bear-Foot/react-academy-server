@@ -1,13 +1,46 @@
 const Express = require('express')
 const bb = require('express-busboy')
+const bodyParser = require('body-parser')
 const cors = require('cors')
 const io = require('socket.io')(9000);
-
+const jwt = require('express-jwt')
 const app = new Express()
-bb.extend(app, { upload: true })
+const jwtMaker = require('jsonwebtoken')
 
 app.use(cors())
 
+app.use(bodyParser.urlencoded({
+  extended: true,
+}))
+
+app.use(bodyParser.json())
+
+
+app.post('/login', (req, res) => {
+  if (!req.body.password) {
+    return res.status(400).send('Missing password')
+  }
+  if (!req.body.username) {
+    return res.status(400).send('Missing username')
+  }
+  const user =  users.find(user => {
+    return user.password === req.body.password && user.username === req.body.username
+  })
+  if (!user) {
+    return res.status(401).send('No user matched those credentials')
+  }
+
+  const token = jwtMaker.sign({ username: user.username }, 'plouf', { expiresIn: 20 })
+  res.status(200).send({ token })
+})
+
+app.get('/user', jwt({
+    secret: 'plouf',
+  }),
+  (req, res) => {
+    return res.send({ username: req.user.username })
+  }
+)
 
 const connections = {}
 
@@ -25,14 +58,14 @@ io.on('connection', socket => {
     updateFileStatus(id + uploadID)
   })
 
-  socket.on('uploadStop', ({ id, uploadID }) => {
-    if (filesUploading[id + uploadID].status === 'ongoing') {
-      filesUploading[id + uploadID] = {
-        ...filesUploading[id + uploadID], status: 'canceled',
-      }
-      console.log('receving', filesUploading[id + uploadID])
-    }
-  })
+  // socket.on('uploadStop', ({ id, uploadID }) => {
+  //   if (filesUploading[id + uploadID].status === 'ongoing') {
+  //     filesUploading[id + uploadID] = {
+  //       ...filesUploading[id + uploadID], status: 'canceled',
+  //     }
+  //     console.log('receving', filesUploading[id + uploadID])
+  //   }
+  // })
 });
 
 const filesUploading = {}
@@ -71,6 +104,14 @@ const updateFileStatus = (fileID) => {
 }
 
 
+const users = [
+  { username: 'Brahim', password: '1' },
+  { username: 'Franklin', password: '2' },
+  { username: 'Marc', password: '3' },
+  { username: 'Anthony', password: '4' },
+  { username: 'Wilfried', password: '5' },
+]
+
 
 
 // app.post('/upload', (req, res) => {
@@ -86,4 +127,4 @@ const updateFileStatus = (fileID) => {
 //     return res.status(200).send()
 //   }, delay)
 // })
-// app.listen(8000, () => console.log('Server up'))
+app.listen(8000, () => console.log('Server up'))
